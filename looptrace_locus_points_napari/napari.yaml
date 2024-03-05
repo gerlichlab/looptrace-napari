@@ -1,0 +1,14 @@
+name: looptrace-locus-points-napari
+contributions:
+  commands:
+  - id: looptrace-locus-points-napari.read_looptrace_locus_points_csv
+    title: Read looptrace locus-specific image points overlays from CSV
+    python_name: looptrace_locus_points_napari.reader:get_reader
+  readers:
+  - command: looptrace-locus-points-napari.read_looptrace_locus_points_csv
+    filename_patterns:
+    - '*.qcfail.csv'
+    - '*.qcpass.csv'
+    - '*.qc_fail.csv'
+    - '*.qc_pass.csv'
+    accepts_directories: false

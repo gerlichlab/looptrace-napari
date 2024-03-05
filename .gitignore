@@ -1,0 +1,4 @@
+# build-related
+build/
+*.egg-info/
+*.pyc
