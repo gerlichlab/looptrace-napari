@@ -17,7 +17,11 @@ PathLike = Union[str, Path]
 
 def read_point_table_file(path: PathLike) -> FullLayerData:
     """
-    Parse the table of points data.
+    Parse table of points data, using filepath to infer QC status to determine visual parameters.
+
+    Specifically, this function is this package's main "contribution" in the terms 
+    of the napari plugins language. It's a reader for a CSV file that represents on-disk 
+    storage of a napari Points layer.
 
     Parameters
     ----------
@@ -28,16 +32,19 @@ def read_point_table_file(path: PathLike) -> FullLayerData:
     -------
     pd.DataFrame, Dict, LayerTypeName
         A tuple in which the first element defines the axes and points that will 
-        be shown in `napari`, the second is keyword arguments for the points 
-        layer constructor, and the third is the name for the type of layer
+        be shown in `napari`, the second element is keyword arguments for the points 
+        layer constructor, and the third element is the name for the type of layer
 
     Raises
     ------
-    ValueError: if the given path doesn't yield a QCStatus inference that's known
+    ValueError: if the given path doesn't yield a QCStatus inference that's known; 
+        this should never happen, because this function's application should be restricted 
+        (by virtue of filtration by the plugin hook and/or by the package's accepted 
+        filename patterns) to cases when the `QCstatus` can indeed be inferred from the `path`.
 
     See Also
     --------
-    :py:class:`reader.QCStatus`
+    :py:class:`QCStatus`
     """
     point_table = pd.read_csv(path)
     points = point_table[[f"axis-{i}" for i in range(5)]]
@@ -49,17 +56,34 @@ def read_point_table_file(path: PathLike) -> FullLayerData:
 
 
 def get_reader(path: Union[PathLike, List[PathLike]]) -> Optional[Callable[[PathLike], List[FullLayerData]]]:
+    """
+    This is the main hook required by napari / napari plugins to provide a Reader plugin.
+
+    Parameters
+    ----------
+    path : str or pathlib.Path or list of str or pathlib.Path
+
+    Returns
+    -------
+    If the plugin represented by this package is intended to read a file of the given type (inferred from 
+    the file's extension), then the function with which to parse that file. Otherwise, nothing.
+
+    See Also
+    --------
+    :py:func:`read_point_table_file`
+    """
     if isinstance(path, (str, Path)) and QCStatus.from_path(path) is not None:
         return lambda p: [read_point_table_file(p)]
 
 
 class QCStatus(Enum):
-    """The possible QC status values"""
+    """The possible QC status values; for the moment just pass/fail"""
     PASS = "pass"
     FAIL = "fail"
 
     @property
     def color(self) -> str:
+        """Use red for QC pass, blue for QC fail."""
         if self is QCStatus.PASS:
             return "red"
         elif self is QCStatus.FAIL:
@@ -69,14 +93,17 @@ class QCStatus(Enum):
 
     @property
     def colour(self) -> str:
+        """Alias for :py:method:`color`"""
         return self.color
     
     @property
     def shape(self) -> str:
+        """Alias for :py:method:`symbol`"""
         return self.symbol
 
     @property
     def symbol(self) -> str:
+        """Use star for QC pass, circle for QC fail."""
         if self is QCStatus.PASS:
             return "*"
         elif self is QCStatus.FAIL:
@@ -87,6 +114,7 @@ class QCStatus(Enum):
 
     @classmethod
     def from_string(cls, s: str) -> Optional["QCStatus"]:
+        """Try to parse the given text as a QC status."""
         s = s.lower()
         s = s.lstrip("qc_").lstrip("qc")
         if s in {"pass", "passed"}:
@@ -97,10 +125,12 @@ class QCStatus(Enum):
     
     @classmethod
     def from_path(cls, p: PathLike) -> Optional["QCStatus"]:
+        """Try to infer QC status from the suffix of the given path."""
         base, ext = os.path.splitext(os.path.basename(p))
         if ext == ".csv":
             return QCStatus.from_string(base.split(".")[-1])
     
     @staticmethod
     def raise_match_error(obj: Any) -> NoReturn:
+        """When QC status inference is attempted for a value for which it's not possible, raise this error."""
         raise ValueError(f"Not a recognised QC status (type {type(obj).__name__}): {obj}")
