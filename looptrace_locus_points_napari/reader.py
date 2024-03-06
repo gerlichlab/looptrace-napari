@@ -1,6 +1,6 @@
 """The main functionality of this napari plugin"""
 
-from abc import ABC, abstractmethod
+from enum import Enum
 import csv
 import os
 from pathlib import Path
@@ -87,55 +87,45 @@ def get_reader(path: Union[PathLike, List[PathLike]]) -> Optional[Callable[[Path
         return lambda p: [read_point_table_file(p)]
 
 
-class QCStatus(ABC):
+class QCStatus(Enum):
     """The possible QC status values; for the moment just pass/fail"""
-
-    @abstractmethod
-    def get_data_and_params_for_napari_layer(rows: List[CsvRow]) -> Tuple[List[PointRecord], LayerParams]:
-        raise NotImplementedError("get_data_and_params must be implemented in concrete subclass of QCStatus!")
+    FAIL = "fail"
+    PASS = "pass"
 
     @property
-    @abstractmethod
     def is_pass(self) -> bool:
-        raise NotImplementedError("is_pass must be implemented in concrete subclass of QCStatus!")
+        return self is self.__class__.PASS
 
     @property
     def is_fail(self) -> bool:
-        return not self.is_pass
+        return self is self.__class__.FAIL
     
-    @property
-    def _base_dynamic_metadata(self) -> LayerParams:
-        return {"edge_color": self.color, "face_color": self.color, "symbol": self.symbol}
-
-    @property
-    def color(self) -> str:
-        """Use red for QC pass, blue for QC fail."""
+    def get_data_and_params_for_napari_layer(self, rows: List[CsvRow]) -> Tuple[List[PointRecord], LayerParams]:
         if self.is_pass:
-            return "red"
-        if self.is_fail:
-            return "blue"
-        QCStatus.raise_match_error(self)
-
-    @property
-    def colour(self) -> str:
-        """Alias for :py:method:`color`"""
-        return self.color
+            color = "red"
+            symbol = "*"
+            data = [parse_simple_record(r, exp_len=5) for r in rows]
+            extra_params = {}
+        elif self.is_fail:
+            color = "blue"
+            symbol = "o"
+            data_codes_pairs = [(parse_simple_record(r, exp_len=6), r[5]) for r in rows]
+            try:
+                data, codes = zip(*data_codes_pairs)
+            except:
+                data, codes = [], []
+            extra_params = {"text": QC_FAIL_CODES_KEY, "properties": {QC_FAIL_CODES_KEY: codes}}
+        else:
+            self.raise_disambiguation_error(self)
+        base_params = {"edge_color": color, "face_color": color, "symbol": symbol}
+        return data, {**base_params, **extra_params}
     
-    @property
-    def symbol(self) -> str:
-        """Use star for QC pass, circle for QC fail."""
-        if self.is_pass:
-            return "*"
-        if self.is_fail:
-            return "o"
-        QCStatus.raise_match_error(self)
-
     @classmethod
     def from_path(cls, p: PathLike) -> Optional["QCStatus"]:
         """Try to infer QC status from the suffix of the given path."""
         base, ext = os.path.splitext(os.path.basename(p))
         if ext == ".csv":
-            return QCStatus.from_string(base.split(".")[-1])
+            return cls.from_string(base.split(".")[-1])
     
     @classmethod
     def from_string(cls, s: str) -> Optional["QCStatus"]:
@@ -144,40 +134,13 @@ class QCStatus(ABC):
         s = s.lstrip("qc_").lstrip("qc")
         if s in {"pass", "passed"}:
             return cls.PASS
-        elif s in {"fail", "failed"}:
+        if s in {"fail", "failed"}:
             return cls.FAIL
         return None
     
-    @staticmethod
-    def raise_match_error(obj: Any) -> NoReturn:
-        """When QC status inference is attempted for a value for which it's not possible, raise this error."""
-        raise ValueError(f"Not a recognised QC status (type {type(obj).__name__}): {obj}")
-
-
-class QCPass(QCStatus):
-    
-    @property
-    def is_pass(self) -> bool:
-        return True
-
-    def get_data_and_params_for_napari_layer(self, rows: List[CsvRow]) -> Tuple[List[PointRecord], LayerParams]:
-        return [parse_simple_record(r, exp_len=5) for r in rows], self._base_dynamic_metadata
-    
-
-class QCFail(QCStatus):
-
-    @property
-    def is_pass(self) -> bool:
-        return False
-    
-    def get_data_and_params_for_napari_layer(self, rows: List[CsvRow]) -> Tuple[List[PointRecord], LayerParams]:
-        data_code_pairs = [(parse_simple_record(r, exp_len=6), r[5]) for r in rows]
-        try:
-            data, codes = zip(*data_code_pairs)
-        except:
-            data, codes = [], []
-        extra_params = {"text": QC_FAIL_CODES_KEY, "properties": {QC_FAIL_CODES_KEY: codes}}
-        return data, {**self._base_dynamic_metadata **extra_params}
+    def raise_disambiguation_error(self) -> NoReturn:
+        """When QC status value cannot be determined, raise this error. Should be impossible."""
+        raise ValueError(f"Not a recognised QC status (type {type(self).__name__}): {self}")
 
 
 def parse_simple_record(r: CsvRow, *, exp_len: int) -> PointRecord:
