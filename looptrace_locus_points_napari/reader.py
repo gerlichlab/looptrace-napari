@@ -1,18 +1,21 @@
 """The main functionality of this napari plugin"""
 
 from enum import Enum
+import json
 import os
 from pathlib import Path
 from typing import *
 
-import pandas as pd
 
 __author__ = "Vince Reuter"
 __credits__ = ["Vince Reuter"]
 
 LayerTypeName = Literal["points"]
-FullLayerData = Tuple[pd.DataFrame, Dict, LayerTypeName]
+FullLayerData = Tuple[List["Point"], Dict, LayerTypeName]
 PathLike = Union[str, Path]
+Point = List[float]
+
+QC_FAIL_CODES_KEY = "failCodes"
 
 
 def read_point_table_file(path: PathLike) -> FullLayerData:
@@ -20,13 +23,13 @@ def read_point_table_file(path: PathLike) -> FullLayerData:
     Parse table of points data, using filepath to infer QC status to determine visual parameters.
 
     Specifically, this function is this package's main "contribution" in the terms 
-    of the napari plugins language. It's a reader for a CSV file that represents on-disk 
+    of the napari plugins language. It's a reader for a JSON file that represents on-disk 
     storage of a napari Points layer.
 
     Parameters
     ----------
     path : str or pathlib.Path
-        Path to the CSV file to parse
+        Path to the JSON file to parse
 
     Returns
     -------
@@ -46,13 +49,15 @@ def read_point_table_file(path: PathLike) -> FullLayerData:
     --------
     :py:class:`QCStatus`
     """
-    point_table = pd.read_csv(path)
-    points = point_table[[f"axis-{i}" for i in range(5)]]
     static_meta = {"size": 0.5, "edge_width": 0.1, "edge_width_is_relative": True, "n_dimensional": False}
     qc = QCStatus.from_path(path)
     dynamic_meta = {"edge_color": qc.color, "face_color": qc.color, "symbol": qc.shape}
-    meta = {**static_meta, **dynamic_meta}
-    return points, meta, "points"
+    with open(path, 'r') as fh:
+        records = json.load(fh)
+    if qc == QCStatus.FAIL:
+        dynamic_meta["text"] = QC_FAIL_CODES_KEY
+        dynamic_meta["properties"] = {QC_FAIL_CODES_KEY: [r[QC_FAIL_CODES_KEY] for r in records]}
+    return [[r["traceId"], r["time"], r["z"], r["y"], r["x"]] for r in records], {**static_meta, **dynamic_meta}, "points"
 
 
 def get_reader(path: Union[PathLike, List[PathLike]]) -> Optional[Callable[[PathLike], List[FullLayerData]]]:
@@ -127,7 +132,7 @@ class QCStatus(Enum):
     def from_path(cls, p: PathLike) -> Optional["QCStatus"]:
         """Try to infer QC status from the suffix of the given path."""
         base, ext = os.path.splitext(os.path.basename(p))
-        if ext == ".csv":
+        if ext == ".json":
             return QCStatus.from_string(base.split(".")[-1])
     
     @staticmethod
