@@ -7,8 +7,8 @@ contributions:
   readers:
   - command: looptrace-locus-points-napari.read_looptrace_locus_points_csv
     filename_patterns:
-    - '*.qcfail.json'
-    - '*.qcpass.json'
-    - '*.qc_fail.json'
-    - '*.qc_pass.json'
+    - '*.qcfail.csv'
+    - '*.qcpass.csv'
+    - '*.qc_fail.csv'
+    - '*.qc_pass.csv'
     accepts_directories: false
