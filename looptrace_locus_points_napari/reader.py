@@ -1,6 +1,5 @@
 """The main functionality of this napari plugin"""
 
-from enum import Enum
 import csv
 import os
 from pathlib import Path
@@ -22,48 +21,10 @@ FailCodesText = str
 PointRecord = Tuple[PointId, Point3D]
 QCPassRecord = PointRecord
 QCFailRecord = Tuple[PointId, Point3D, FailCodesText]
-FullLayerData = Tuple[List[Union[TraceId, Timepoint, float]], LayerParams, LayerTypeName]
+RawDataLike = List[Union[TraceId, Timepoint, float]]
+FullLayerData = Tuple[RawDataLike, LayerParams, LayerTypeName]
 
 QC_FAIL_CODES_KEY = "failCodes"
-
-
-def read_point_table_file(path: PathLike) -> FullLayerData:
-    """
-    Parse table of points data, using filepath to infer QC status to determine visual parameters.
-
-    Specifically, this function is this package's main "contribution" in the terms 
-    of the napari plugins language. It's a reader for a CSV file that represents on-disk 
-    storage of a napari Points layer.
-
-    Parameters
-    ----------
-    path : str or pathlib.Path
-        Path to the CSV file to parse
-
-    Returns
-    -------
-    pd.DataFrame, Dict, LayerTypeName
-        A tuple in which the first element defines the axes and points that will 
-        be shown in `napari`, the second element is keyword arguments for the points 
-        layer constructor, and the third element is the name for the type of layer
-
-    Raises
-    ------
-    ValueError: if the given path doesn't yield a QCStatus inference that's known; 
-        this should never happen, because this function's application should be restricted 
-        (by virtue of filtration by the plugin hook and/or by the package's accepted 
-        filename patterns) to cases when the `QCstatus` can indeed be inferred from the `path`.
-
-    See Also
-    --------
-    :py:class:`QCStatus`
-    """
-    static_params = {"size": 0.5, "edge_width": 0.1, "edge_width_is_relative": True, "n_dimensional": False}
-    qc = QCStatus.from_path(path)
-    with open(path, mode='r', newline='') as fh:
-        rows: List[CsvRow] = list(csv.reader(fh))
-    data, status_dependent_params = qc.get_data_and_params_for_napari_layer(rows)
-    return data, {**static_params, **status_dependent_params}, "points"
 
 
 def get_reader(path: Union[PathLike, List[PathLike]]) -> Optional[Callable[[PathLike], List[FullLayerData]]]:
@@ -78,69 +39,43 @@ def get_reader(path: Union[PathLike, List[PathLike]]) -> Optional[Callable[[Path
     -------
     If the plugin represented by this package is intended to read a file of the given type (inferred from 
     the file's extension), then the function with which to parse that file. Otherwise, nothing.
-
-    See Also
-    --------
-    :py:func:`read_point_table_file`
     """
-    if isinstance(path, (str, Path)) and QCStatus.from_path(path) is not None:
-        return lambda p: [read_point_table_file(p)]
+    static_params = {"size": 0.5, "edge_width": 0.1, "edge_width_is_relative": True, "n_dimensional": False}
 
-
-class QCStatus(Enum):
-    """The possible QC status values; for the moment just pass/fail"""
-    FAIL = "fail"
-    PASS = "pass"
-
-    @property
-    def is_pass(self) -> bool:
-        return self is self.__class__.PASS
-
-    @property
-    def is_fail(self) -> bool:
-        return self is self.__class__.FAIL
-    
-    def get_data_and_params_for_napari_layer(self, rows: List[CsvRow]) -> Tuple[List[PointRecord], LayerParams]:
-        if self.is_pass:
-            color = "red"
-            symbol = "*"
-            data = [parse_simple_record(r, exp_len=5) for r in rows]
-            extra_params = {}
-        elif self.is_fail:
-            color = "blue"
-            symbol = "o"
-            data_codes_pairs = [(parse_simple_record(r, exp_len=6), r[5]) for r in rows]
-            try:
-                data, codes = zip(*data_codes_pairs)
-            except:
-                data, codes = [], []
-            extra_params = {"text": QC_FAIL_CODES_KEY, "properties": {QC_FAIL_CODES_KEY: codes}}
-        else:
-            self.raise_disambiguation_error(self)
-        base_params = {"edge_color": color, "face_color": color, "symbol": symbol}
-        return data, {**base_params, **extra_params}
-    
-    @classmethod
-    def from_path(cls, p: PathLike) -> Optional["QCStatus"]:
-        """Try to infer QC status from the suffix of the given path."""
+    if isinstance(path, (str, Path)):
         base, ext = os.path.splitext(os.path.basename(p))
         if ext == ".csv":
-            return cls.from_string(base.split(".")[-1])
-    
-    @classmethod
-    def from_string(cls, s: str) -> Optional["QCStatus"]:
-        """Try to parse the given text as a QC status."""
-        s = s.lower()
-        s = s.lstrip("qc_").lstrip("qc")
-        if s in {"pass", "passed"}:
-            return cls.PASS
-        if s in {"fail", "failed"}:
-            return cls.FAIL
-        return None
-    
-    def raise_disambiguation_error(self) -> NoReturn:
-        """When QC status value cannot be determined, raise this error. Should be impossible."""
-        raise ValueError(f"Not a recognised QC status (type {type(self).__name__}): {self}")
+            status_name = base.lower().lstrip("qc_").lstrip("qc")
+            if status_name in {"pass", "passed"}:
+                color = "red"
+                symbol = "*"
+                read_rows = parse_passed
+            elif status_name in {"fail", "failed"}:
+                color = "blue"
+                symbol = "o"
+                read_rows = parse_passed
+            else:
+                return None
+            base_meta = {"edge_color": color, "face_color": color, "symbol": symbol}
+            def parse(p):
+                with open(p, mode='r', newline='') as fh:
+                    rows = list(csv.reader(fh))
+                data, extra_meta = read_rows(rows)
+                return data, {**static_params, **base_meta, **extra_meta}
+            return lambda p: [parse(p)]
+
+
+def parse_passed(rows: List[CsvRow]) -> Tuple[RawDataLike, LayerParams]:
+    return [parse_simple_record(r, exp_len=5) for r in rows], {}
+
+
+def parse_failed(rows: List[CsvRow]) -> Tuple[RawDataLike, LayerParams]:
+    data_codes_pairs = [(parse_simple_record(r, exp_len=6), r[5]) for r in rows]
+    try:
+        data, codes = zip(*data_codes_pairs)
+    except:
+        data, codes = [], []
+    return data, {"text": QC_FAIL_CODES_KEY, "properties": {QC_FAIL_CODES_KEY: codes}}
 
 
 def parse_simple_record(r: CsvRow, *, exp_len: int) -> PointRecord:
