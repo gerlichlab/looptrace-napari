@@ -1,3 +1,43 @@
+[project]
+name = "looptrace-napari"
+dynamic = ["version"]
+requires-python = ">= 3.10, < 3.12"
+authors = [
+    {name = "Vince Reuter"}
+]
+description = "This project facilitates viewing various `looptrace` outputs in `napari`"
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["visualisation", "bioinformatics", "chromatin", "napari", "FISH"]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+[tool.setuptools.package-data]
+looptrace_napari = [ "napari.yaml" ]
+
+[tool.setuptools.dynamic]
+version = { attr = "looptrace_napari.__version__" }
+
+[project.entry-points."napari.manifest"]
+looptrace-napari = "looptrace_napari:napari.yaml"
+
+[project.optional-dependencies]
+dev = [
+    "napari >= 0.4.19; sys_platform == 'darwin'",
+    "napari[all] >= 0.4.19; sys_platform != 'darwin'",
+    "pyqt6 >= 6.5.0; sys_platform == 'darwin'",
+]
+
+[project.urls]
+Homepage = "https://github.com/gerlichlab/looptrace-napari"
+Repository = "https://github.com/gerlichlab/looptrace-napari.git"
+Issues = "https://github.com/gerlichlab/looptrace-napari/issues"
+
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
