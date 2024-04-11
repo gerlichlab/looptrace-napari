@@ -3,7 +3,7 @@ contributions:
   commands:
   - id: looptrace-napari.read_looptrace_locus_points_csv
     title: Read looptrace locus-specific image points overlays from CSV
-    python_name: looptrace_napari.reader:get_reader
+    python_name: looptrace_napari.locus_specific_points_reader:get_reader
   readers:
   - command: looptrace-napari.read_looptrace_locus_points_csv
     filename_patterns:
