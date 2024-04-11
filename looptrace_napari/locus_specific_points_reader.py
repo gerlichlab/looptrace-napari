@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 from typing import (
     Callable, 
-    Literal,
     Optional,
     Tuple, 
     Union,
@@ -27,7 +26,7 @@ __author__ = "Vince Reuter"
 __credits__ = ["Vince Reuter"]
 
 QC_FAIL_CODES_KEY = "failCodes"
-QCCode = Literal[0, 1]
+QCFailReasons = str
 
 
 def get_reader(path: Union[PathLike, list[PathLike]]) -> Optional[Callable[[PathLike], list[FullLayerData]]]:
@@ -67,6 +66,8 @@ def get_reader(path: Union[PathLike, list[PathLike]]) -> Optional[Callable[[Path
                 with open(p, mode='r', newline='') as fh:
                     rows = list(csv.reader(fh))
                 data, extra_meta = read_rows(rows)
+                if not data:
+                    logging.warning("No data rows parsed!")
                 params = {**static_params, **base_meta, **extra_meta}
                 return data, params, "points"
             return lambda p: [parse(p)]
@@ -88,7 +89,7 @@ def parse_failed(rows: list[CsvRow]) -> Tuple[RawPointsLike, LayerParams]:
         data = []
         codes = []
     else:
-        data_codes_pairs: list[Tuple[PointRecord, QCCode]] = [(parse_simple_record(r, exp_len=6), r[5]) for r in rows]
+        data_codes_pairs: list[Tuple[PointRecord, QCFailReasons]] = [(parse_simple_record(r, exp_len=6), r[5]) for r in rows]
         data, codes = map(list, zip(*data_codes_pairs))
     return data, {"text": QC_FAIL_CODES_KEY, "properties": {QC_FAIL_CODES_KEY: codes}}
 
