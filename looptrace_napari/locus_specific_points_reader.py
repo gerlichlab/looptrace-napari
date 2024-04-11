@@ -4,31 +4,31 @@ import csv
 import logging
 import os
 from pathlib import Path
-from typing import *
-from typing import List, Tuple
+from typing import (
+    Callable, 
+    Optional,
+    Tuple, 
+    Union,
+)
+
+from ._types import (
+    CsvRow, 
+    FullLayerData, 
+    LayerParams,
+    PathLike, 
+    PointRecord,
+    RawPointsLike,
+    Timepoint,
+    TraceId,
+    )
 
 __author__ = "Vince Reuter"
 __credits__ = ["Vince Reuter"]
 
-CsvRow = List[str]
-PathLike = Union[str, Path]
-LayerTypeName = Literal["points"]
-LayerParams = Dict
-TraceId = int
-Timepoint = int
-PointId = Tuple[TraceId, Timepoint]
-Point3D = Tuple[float, float, float]
-FailCodesText = str
-PointRecord = Tuple[PointId, Point3D]
-QCPassRecord = PointRecord
-QCFailRecord = Tuple[PointId, Point3D, FailCodesText]
-RawPointLike = Union[TraceId, Timepoint, float]
-FullLayerData = Tuple[List[RawPointLike], LayerParams, LayerTypeName]
-
 QC_FAIL_CODES_KEY = "failCodes"
 
 
-def get_reader(path: Union[PathLike, List[PathLike]]) -> Optional[Callable[[PathLike], List[FullLayerData]]]:
+def get_reader(path: Union[PathLike, list[PathLike]]) -> Optional[Callable[[PathLike], list[FullLayerData]]]:
     """
     This is the main hook required by napari / napari plugins to provide a Reader plugin.
 
@@ -77,11 +77,11 @@ def get_reader(path: Union[PathLike, List[PathLike]]) -> Optional[Callable[[Path
             
 
 
-def parse_passed(rows: List[CsvRow]) -> Tuple[List[RawPointLike], LayerParams]:
+def parse_passed(rows: list[CsvRow]) -> Tuple[RawPointsLike, LayerParams]:
     return [parse_simple_record(r, exp_len=5) for r in rows], {}
 
 
-def parse_failed(rows: List[CsvRow]) -> Tuple[List[RawPointLike], LayerParams]:
+def parse_failed(rows: list[CsvRow]) -> Tuple[RawPointsLike, LayerParams]:
     data_codes_pairs = [(parse_simple_record(r, exp_len=6), r[5]) for r in rows]
     try:
         data, codes = zip(*data_codes_pairs)
