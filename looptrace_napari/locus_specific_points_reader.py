@@ -10,6 +10,7 @@ from typing import (
     Tuple, 
     Union,
 )
+from numpydoc_decorator import doc
 
 from ._types import (
     CsvRow, 
@@ -25,23 +26,18 @@ from ._types import (
 __author__ = "Vince Reuter"
 __credits__ = ["Vince Reuter"]
 
-QC_FAIL_CODES_KEY = "failCodes"
 QCFailReasons = str
 
+QC_FAIL_CODES_KEY = "failCodes"
 
+
+@doc(
+    summary="This is the main hook required by napari / napari plugins to provide a Reader plugin.",
+    parameters=dict(path="The file(s) or folder(s) for which to attempt to infer reader function"),
+    returns="A None if we can't read the given path(s), else a reader function",
+    notes="https://napari.org/stable/plugins/guides.html#layer-data-tuples",
+)
 def get_reader(path: Union[PathLike, list[PathLike]]) -> Optional[Callable[[PathLike], list[FullLayerData]]]:
-    """
-    This is the main hook required by napari / napari plugins to provide a Reader plugin.
-
-    Parameters
-    ----------
-    path : str or pathlib.Path or list of str or pathlib.Path
-
-    Returns
-    -------
-    If the plugin represented by this package is intended to read a file of the given type (inferred from 
-    the file's extension), then the function with which to parse that file. Otherwise, nothing.
-    """
     static_params = {"size": 0.5, "edge_width": 0.05, "edge_width_is_relative": True, "n_dimensional": False}
 
     if isinstance(path, (str, Path)):
@@ -79,11 +75,28 @@ def get_reader(path: Union[PathLike, list[PathLike]]) -> Optional[Callable[[Path
         return None
             
 
+@doc(
+    summary="Parse records from points which passed QC.",
+    parameters=dict(records="Records to parse"),
+    returns="""
+        A pair in which the first element is the array-like of points coordinates, 
+        and the second element is the mapping from attribute name to list of values (1 per point).
+    """,
+    notes="https://napari.org/stable/plugins/guides.html#layer-data-tuples",
+)
+def parse_passed(records: list[CsvRow]) -> Tuple[RawPointsLike, LayerParams]:
+    return [parse_simple_record(r, exp_len=5) for r in records], {}
 
-def parse_passed(rows: list[CsvRow]) -> Tuple[RawPointsLike, LayerParams]:
-    return [parse_simple_record(r, exp_len=5) for r in rows], {}
 
-
+@doc(
+    summary="Parse records from points which failed QC.",
+    parameters=dict(records="Records to parse"),
+    returns="""
+        A pair in which the first element is the array-like of points coordinates, 
+        and the second element is the mapping from attribute name to list of values (1 per point).
+    """,
+    notes="https://napari.org/stable/plugins/guides.html#layer-data-tuples",
+)
 def parse_failed(rows: list[CsvRow]) -> Tuple[RawPointsLike, LayerParams]:
     if not rows:
         data = []
@@ -94,6 +107,15 @@ def parse_failed(rows: list[CsvRow]) -> Tuple[RawPointsLike, LayerParams]:
     return data, {"text": QC_FAIL_CODES_KEY, "properties": {QC_FAIL_CODES_KEY: codes}}
 
 
+@doc(
+    summary="Parse records from points which passed QC.",
+    parameters=dict(records="Records to parse"),
+    returns="""
+        A pair in which the first element is the array-like of points coordinates, 
+        and the second element is the mapping from attribute name to list of values (1 per point).
+    """,
+    notes="https://napari.org/stable/plugins/guides.html#layer-data-tuples",
+)
 def parse_simple_record(r: CsvRow, *, exp_len: int) -> PointRecord:
     """Parse a single line from an input CSV file."""
     if not isinstance(r, list):
