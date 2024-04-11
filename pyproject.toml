@@ -31,6 +31,7 @@ dev = [
     "napari >= 0.4.19; sys_platform == 'darwin'",
     "napari[all] >= 0.4.19; sys_platform != 'darwin'",
     "pyqt6 >= 6.5.0; sys_platform == 'darwin'",
+    "zarr >= 2.4.12",
 ]
 
 [project.urls]
