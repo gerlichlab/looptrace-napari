@@ -84,9 +84,13 @@ def parse_passed(rows: list[CsvRow]) -> Tuple[RawPointsLike, LayerParams]:
 
 
 def parse_failed(rows: list[CsvRow]) -> Tuple[RawPointsLike, LayerParams]:
-    data_codes_pairs: list[Tuple[PointRecord, QCCode]] = [(parse_simple_record(r, exp_len=6), r[5]) for r in rows]
-    data, codes = (tuple(), tuple()) if len(data_codes_pairs) == 0 else zip(*data_codes_pairs)
-    return list(data), {"text": QC_FAIL_CODES_KEY, "properties": {QC_FAIL_CODES_KEY: list(codes)}}
+    if not rows:
+        data = []
+        codes = []
+    else:
+        data_codes_pairs: list[Tuple[PointRecord, QCCode]] = [(parse_simple_record(r, exp_len=6), r[5]) for r in rows]
+        data, codes = map(list, zip(*data_codes_pairs))
+    return data, {"text": QC_FAIL_CODES_KEY, "properties": {QC_FAIL_CODES_KEY: codes}}
 
 
 def parse_simple_record(r: CsvRow, *, exp_len: int) -> PointRecord:
