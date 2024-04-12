@@ -7,18 +7,17 @@ from operator import itemgetter
 import os
 from pathlib import Path
 from typing import Dict, Literal, Mapping, Optional, Tuple, Union
+import warnings
 
 import dask.array as da
-import numpy as np
 import numpy.typing as npt
 from numpydoc_decorator import doc
 import pandas as pd
-from ome_zarr.io import parse_url as parse_zarr_url
-from ome_zarr.reader import Reader as ZarrReader
+import zarr
 
 from .geometry import ImagePoint2D
 from ._docs import CommonReaderDoc
-from ._types import FieldOfViewFrom1, LayerParams, NucleusNumber, PathLike
+from .types import FieldOfViewFrom1, LayerParams, NucleusNumber, PathLike
 
 # Generic ArrayLike since element type differs depending on kind of layer.
 FullLayerData = Tuple[npt.ArrayLike, LayerParams, "LayerTypeName"]
@@ -32,82 +31,6 @@ CentroidsLayer = Tuple[npt.ArrayLike, LayerParams, Literal["points"]]
 
 # Environment variable for finding nuclei channel if needed.
 LOOPTRACE_NAPARI_NUCLEI_CHANNEL_ENV_VAR = "LOOPTRACE_NAPARI_NUCLEI_CHANNEL"
-
-
-def _read_csv(fp: Path) -> list[Tuple[NucleusNumber, ImagePoint2D]]:
-    df = pd.read_csv(fp)
-    return [(NucleusNumber(r["label"]), ImagePoint2D(y=r["yc"], x=r["xc"])) for _, r in df.iterrows()]
-
-
-def _read_zarr(root: Path) -> npt.ArrayLike:
-    reader = ZarrReader(parse_zarr_url(root))
-    return next(reader()).data
-
-
-def find_paths_by_fov(folder: Path, *, extension: str) -> Dict[FieldOfViewFrom1, Path]:
-    image_paths = {}
-    for fn in os.listdir(folder):
-        fp = folder / fn
-        fov = get_fov_sort_key(fp, extension=extension)
-        if fov is not None:
-            if fov in image_paths:
-                raise Exception(f"FOV {fov} already seen in folder! {folder}")
-            image_paths.append((fov, fp))
-    return image_paths
-
-
-class NucleiDataSubfolders(Enum):
-    IMAGES = "nuc_images"
-    MASKS = "nuc_masks"
-    CENTERS = "_nuclear_masks_visualisation"
-
-    @classmethod
-    def all_present_within(cls, p: PathLike) -> bool:
-        return all(m._is_present_within(p) for m in cls)
-
-    @classmethod
-    def read_all_from_root(cls, p: PathLike) -> Dict[FieldOfViewFrom1, "NucleiVisualisationData"]:
-        image_paths = find_paths_by_fov(cls.IMAGES.relpath(p), extension=".zarr")
-        masks_paths = find_paths_by_fov(cls.MASKS.relpath(p), extension=".zarr")
-        centers_paths = find_paths_by_fov(cls.CENTERS.relpath(p), extension=".csv")
-        fields_of_view = set(image_paths.keys()) & set(masks_paths.keys()) & set(centers_paths.keys())
-        bundles: Dict[FieldOfViewFrom1, "NucleiVisualisationData"] = {}
-        for fov in sorted(fields_of_view):
-            logging.debug(f"Reading data for FOV: {fov}")
-            image_fp: Path = image_paths[fov]
-            logging.debug(f"Reading nuclei image: {image_fp}")
-            image = _read_zarr(image_fp)
-            masks_fp: Path = masks_paths[fov]
-            logging.debug(f"Reading nuclei masks: {masks_fp}")
-            masks = _read_zarr(masks_fp)
-            centers_fp: Path = centers_paths[fov]
-            logging.debug(f"Reading nuclei centers: {centers_fp}")
-            centers = _read_csv(centers_fp)
-            bundles[fov] = NucleiVisualisationData(image=image, masks=masks, centers=centers)
-        return bundles
-
-    @classmethod
-    def relpaths(cls, p: PathLike) -> Dict[str, Path]:
-        return {m.value: m.relpath(p) for m in cls}
-
-    def _is_present_within(self, p: PathLike) -> bool:
-        return self.relpath(p).is_dir()
-
-    def relpath(self, p: PathLike) -> Path:
-        return Path(p) / self.value
-    
-
-def get_fov_sort_key(path: PathLike, *, extension: str) -> Optional[FieldOfViewFrom1]:
-    if not isinstance(path, (str, Path)):
-        raise TypeError(f"Cannot parse sort-by-FOV key for {extension} stack from alleged path: {path} (type {type(path).__name__})")
-    _, fn = os.path.split(path)
-    if not fn.startswith("P") or fn.endswith(extension):
-        return None
-    try:
-        rawval = int(fn.lstrip("P").rstrip(extension))
-    except TypeError:
-        return None
-    return FieldOfViewFrom1(rawval)
 
 
 @doc(
@@ -136,6 +59,50 @@ def get_reader(path: CommonReaderDoc.path_type):
     return lambda root: build_layers(NucleiDataSubfolders.read_all_from_root(root))
 
 
+class NucleiDataSubfolders(Enum):
+    IMAGES = "nuc_images"
+    MASKS = "nuc_masks"
+    CENTERS = "_nuclear_masks_visualisation"
+
+    @classmethod
+    def all_present_within(cls, p: PathLike) -> bool:
+        return all(m._is_present_within(p) for m in cls)
+
+    @classmethod
+    def read_all_from_root(cls, p: PathLike) -> Dict[FieldOfViewFrom1, "NucleiVisualisationData"]:
+        image_paths = find_paths_by_fov(cls.IMAGES.relpath(p), extension=".zarr")
+        masks_paths = find_paths_by_fov(cls.MASKS.relpath(p), extension=".zarr")
+        centers_paths = find_paths_by_fov(cls.CENTERS.relpath(p), extension=".nuclear_masks.csv")
+        fields_of_view = set(image_paths.keys()) & set(masks_paths.keys()) & set(centers_paths.keys())
+        logging.debug(f"Image paths count: {len(image_paths)}")
+        logging.debug(f"Masks paths count: {len(masks_paths)}")
+        logging.debug(f"Centers paths count: {len(centers_paths)}")
+        bundles: Dict[FieldOfViewFrom1, "NucleiVisualisationData"] = {}
+        for fov in sorted(fields_of_view):
+            logging.debug(f"Reading data for FOV: {fov}")
+            image_fp: Path = image_paths[fov]
+            logging.debug(f"Reading nuclei image: {image_fp}")
+            image = _read_zarr(image_fp)
+            masks_fp: Path = masks_paths[fov]
+            logging.debug(f"Reading nuclei masks: {masks_fp}")
+            masks = _read_zarr(masks_fp)
+            centers_fp: Path = centers_paths[fov]
+            logging.debug(f"Reading nuclei centers: {centers_fp}")
+            centers = _read_csv(centers_fp)
+            bundles[fov] = NucleiVisualisationData(image=image, masks=masks, centers=centers)
+        return bundles
+
+    @classmethod
+    def relpaths(cls, p: PathLike) -> Dict[str, Path]:
+        return {m.value: m.relpath(p) for m in cls}
+
+    def _is_present_within(self, p: PathLike) -> bool:
+        return self.relpath(p).is_dir()
+
+    def relpath(self, p: PathLike) -> Path:
+        return Path(p) / self.value
+    
+
 @doc(
     summary="Bundle the data needed to visualise nuclei.",
     parameters=dict(
@@ -156,52 +123,54 @@ class NucleiVisualisationData:
 
     def __post_init__(self) -> None:
         # First, handle the raw image.
-        ndim = len(self.image.shape)
         if len(self.image.shape) == 5:
             if self.image.shape[0] != 1:
                 raise ValueError(
                     f"5D image for nuclei visualisation must have trivial first dimension; got {self.image.shape[0]} (not 1)"
                     )
-            self.image = self.image[0]
+            object.__setattr__(self, "image", self.image[0])
         if len(self.image.shape) == 4:
             if self.image.shape[0] == 1:
-                self.image = self.image[0]
+                logging.debug("Collapsing trivial channel axis for nuclei image")
+                object.__setattr__(self, "image", self.image[0])
             else:
+                logging.debug("Multiple channels in nuclei image; attempting to determine which to use")
                 nuc_channel = os.getenv(LOOPTRACE_NAPARI_NUCLEI_CHANNEL_ENV_VAR, "")
                 if nuc_channel == "":
                     pass
                 try:
                     nuc_channel = int(nuc_channel)
                 except TypeError as e:
-                    raise ValueError(f"Illegal nuclei channel value (from {LOOPTRACE_NAPARI_NUCLEI_CHANNEL_ENV_VAR}): {nuc_channel}") from e
+                    raise ValueError(
+                        f"Illegal nuclei channel value (from {LOOPTRACE_NAPARI_NUCLEI_CHANNEL_ENV_VAR}): {nuc_channel}"
+                        ) from e
                 if nuc_channel >= self.image.shape[0]:
-                    raise ValueError(f"Illegal nuclei channel value (from {LOOPTRACE_NAPARI_NUCLEI_CHANNEL_ENV_VAR}), {nuc_channel}, for channel axis of length {self.image.shape[0]}")
-                self.image = self.image[nuc_channel]
+                    raise ValueError(
+                        f"Illegal nuclei channel value (from {LOOPTRACE_NAPARI_NUCLEI_CHANNEL_ENV_VAR}), {nuc_channel}, for channel axis of length {self.image.shape[0]}"
+                        )
+                logging.debug(f"Using nuclei channel (from {LOOPTRACE_NAPARI_NUCLEI_CHANNEL_ENV_VAR}): {nuc_channel}")
+                object.__setattr__(self, "image", self.image[nuc_channel])
         if len(self.image.shape) == 3:
             if self.image.shape[0] == 1:
-                self.image = self.image[0]
+                logging.debug("Collapsing trivial z-axis for nuclei image")
+                object.__setattr__(self, "image", self.image[0])
             else:
-                logging.debug("Max projecting along z for nuclei image...")
-                self.image = max_project_z(self.img)
+                logging.debug("Max projecting along z for nuclei image")
+                object.__setattr__(self, "image", max_project_z(self.img))
         if len(self.image.shape) == 2:
             # All good
             pass
         else:
-            raise ValueError("Cannot use image with {ndim} dimension(s) for nuclei visualisation")
+            raise ValueError(f"Cannot use image with {len(self.image.shape)} dimension(s) for nuclei visualisation")
         
         # Then, handle the masks image.
         if len(self.masks.shape) == 5:
             if any(d != 1 for d in self.masks.shape[:3]):
                 raise ValueError(f"5D nuclear masks image with at least 1 nontrivial (t, c, z) axis! {self.masks.shape}")
-            self.masks = self.masks[0, 0, 0]
+            logging.debug("Reducing 5D nuclear masks to 2D")
+            object.__setattr__(self, "masks", self.masks[0, 0, 0])
         if len(self.masks.shape) != 2:
             raise ValueError(f"Need 2D image for nuclear masks! Got {len(self.masks.shape)}: {self.masks.shape}")
-
-
-def max_project_z(img: npt.ArrayLike) -> npt.ArrayLike:
-    if len(img.shape) != 3:
-        raise ValueError(f"Image to max-z-project must have 3 dimensions! Got {len(img.shape)}")
-    return da.max(img, axis=0)
 
 
 def build_layers(
@@ -211,13 +180,89 @@ def build_layers(
     masks = []
     nuclei_points = []
     nuclei_labels = []
-    for _, visdata in sorted(bundles.items(), key=itemgetter(0)):
+    for i, (_, visdata) in enumerate(sorted(bundles.items(), key=itemgetter(0))):
         images.append(visdata.image)
         masks.append(visdata.masks)
-        nuc, pt = visdata.centers
-        nuclei_points.append([pt.y_coordinate, pt.x_coordinate])
-        nuclei_labels.append(nuc)
-    images_layer = (da.stack(images, axis=0), {}, "image")
-    masks_layer = (da.stack(masks, axis=0), {}, "labels")
-    points_layer = (nuclei_points, {"text": "nucleus", "properties": {"nucleus": nuclei_labels}}, "nuclei")
+        for nuc, pt in visdata.centers:
+            nuclei_points.append([i, pt.get_y_coordinate(), pt.get_x_coordinate()])
+            nuclei_labels.append(nuc.get)
+    
+    # Prep the data for presentation as layers.
+    images = da.stack(images)
+    logging.debug(f"Image layer data shape: {images.shape}")
+    masks = da.stack(masks)
+    logging.debug(f"Masks layer data shape: {masks.shape}")
+    
+    labs_text = {
+        "string": "{nucleus}",
+        "size": 10, # tested on FOVs of 2048 (x) x 2044 (y), with ~15-20 nuclei per FOV
+        "color": "black",
+    }
+    points_params = {"name": "labels", "text": labs_text, "properties": {"nucleus": nuclei_labels}}
+
+    images_layer = (images, {"name": "max_proj_z"}, "image")
+    masks_layer = (masks, {"name": "masks"}, "labels")
+    points_layer = (nuclei_points, points_params, "points")
     return images_layer, masks_layer, points_layer
+
+
+def find_paths_by_fov(folder: Path, *, extension: str) -> Dict[FieldOfViewFrom1, Path]:
+    image_paths = {}
+    for fn in os.listdir(folder):
+        fp = folder / fn
+        fov = get_fov_sort_key(fp, extension=extension)
+        if fov is not None:
+            if fov in image_paths:
+                raise Exception(f"FOV {fov} already seen in folder! {folder}")
+            image_paths[fov] = fp
+    return image_paths
+
+
+def get_fov_sort_key(path: PathLike, *, extension: str) -> Optional[FieldOfViewFrom1]:
+    if not isinstance(path, (str, Path)):
+        raise TypeError(f"Cannot parse sort-by-FOV key for {extension} stack from alleged path: {path} (type {type(path).__name__})")
+    _, fn = os.path.split(path)
+    if not (fn.startswith("P") and fn.endswith(extension)):
+        return None
+    rawval = fn.lstrip("P").rstrip(extension)
+    if rawval.endswith(extension):
+        # Support older looptrace-emitted data.
+        warnings.warn(f"Stripping second '{extension}' extension; use data from newer software", DeprecationWarning)
+        rawval = rawval.rstrip(extension)
+    try:
+        rawval = int(rawval)
+    except ValueError:
+        return None
+    return FieldOfViewFrom1(rawval)
+
+
+def max_project_z(img: npt.ArrayLike) -> npt.ArrayLike:
+    if len(img.shape) != 3:
+        raise ValueError(f"Image to max-z-project must have 3 dimensions! Got {len(img.shape)}")
+    return da.max(img, axis=0)
+
+
+class ZarrParseException(Exception):
+    def __init__(self, *, path: Path, msg: str) -> None:
+        super().__init__(f"Parsing {path} failed with message: {msg}")
+        self.path = path
+
+
+def _read_csv(fp: Path) -> list[Tuple[NucleusNumber, ImagePoint2D]]:
+    logging.debug(f"Reading CSV: {fp}")
+    df = pd.read_csv(fp, index_col=0)
+    nuclei = df["label"] # preserves data type of this column / field, .iterrows() seems to lose it.
+    ys = df["yc"]
+    xs = df["xc"]
+    return [(NucleusNumber(n), ImagePoint2D(y=y, x=x)) for n, y, x in zip(nuclei, ys, xs)]
+
+
+def _read_zarr(root: Path) -> npt.ArrayLike:
+    logging.debug(f"Reading ZARR: {root}")
+    if (root / ".zarray").is_file():
+        data_root = root
+    elif (root / "0" / ".zarray").is_file():
+        data_root = root / "0"
+    else:
+        raise ZarrParseException(path=root, msg="Failed to find .zarray to indicate data folder")
+    return zarr.open(data_root)[:]

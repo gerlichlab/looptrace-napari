@@ -34,7 +34,7 @@ dev = [
     "numpydoc_decorator >= 2.2.0",
     "pandas",
     "pyqt6 >= 6.5.0; sys_platform == 'darwin'",
-    "ome-zarr >= 0.8.3",
+    "pytest",
     "zarr >= 2.4.12",
 ]
 
