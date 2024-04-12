@@ -96,7 +96,7 @@ def get_reader(path: CommonReaderDoc.path_type) -> Optional[Callable[[PathLike],
     notes="https://napari.org/stable/plugins/guides.html#layer-data-tuples",
 )
 def parse_passed(records: list[CsvRow]) -> Tuple[RawLocusPointsLike, LayerParams]:
-    return [parse_simple_record(r, exp_len=5) for r in records], {}
+    return [parse_simple_record(r, exp_num_fields=5) for r in records], {}
 
 
 @doc(
@@ -108,31 +108,33 @@ def parse_passed(records: list[CsvRow]) -> Tuple[RawLocusPointsLike, LayerParams
     """,
     notes="https://napari.org/stable/plugins/guides.html#layer-data-tuples",
 )
-def parse_failed(rows: list[CsvRow]) -> Tuple[RawLocusPointsLike, LayerParams]:
-    if not rows:
+def parse_failed(records: list[CsvRow]) -> Tuple[RawLocusPointsLike, LayerParams]:
+    if not records:
         data = []
         codes = []
     else:
-        data_codes_pairs: list[Tuple[PointRecord, QCFailReasons]] = [(parse_simple_record(r, exp_len=6), r[5]) for r in rows]
+        data_codes_pairs: list[Tuple[PointRecord, QCFailReasons]] = [(parse_simple_record(r, exp_num_fields=6), r[5]) for r in records]
         data, codes = map(list, zip(*data_codes_pairs))
     return data, {"text": QC_FAIL_CODES_KEY, "properties": {QC_FAIL_CODES_KEY: codes}}
 
 
 @doc(
-    summary="Parse records from points which passed QC.",
-    parameters=dict(records="Records to parse"),
+    summary="Parse single-point from a single record (e.g., row from a CSV file).",
+    parameters=dict(
+        r="Record (e.g. CSV row) to parse",
+        exp_num_fields="The expected number of data fields (e.g., columns) in the record",
+        ),
     returns="""
-        A pair in which the first element is the array-like of points coordinates, 
-        and the second element is the mapping from attribute name to list of values (1 per point).
+        A pair of values in which the first element represents a locus spot's trace ID and timepoint, 
+        and the second element represents the (z, y, x) coordinates of the centroid of the spot fit.
     """,
-    notes="https://napari.org/stable/plugins/guides.html#layer-data-tuples",
 )
-def parse_simple_record(r: CsvRow, *, exp_len: int) -> PointRecord:
+def parse_simple_record(r: CsvRow, *, exp_num_fields: int) -> PointRecord:
     """Parse a single line from an input CSV file."""
     if not isinstance(r, list):
         raise TypeError(f"Record to parse must be list, not {type(r).__name__}")
-    if len(r) != exp_len:
-        raise ValueError(f"Expected record of length {exp_len} but got {len(r)}: {r}")
+    if len(r) != exp_num_fields:
+        raise ValueError(f"Expected record of length {exp_num_fields} but got {len(r)}: {r}")
     trace = int(r[0])
     timepoint = int(r[1])
     z = float(r[2])
