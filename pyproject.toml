@@ -30,8 +30,11 @@ looptrace-napari = "looptrace_napari:napari.yaml"
 dev = [
     "napari >= 0.4.19; sys_platform == 'darwin'",
     "napari[all] >= 0.4.19; sys_platform != 'darwin'",
+    "numpy",
     "numpydoc_decorator >= 2.2.0",
+    "pandas",
     "pyqt6 >= 6.5.0; sys_platform == 'darwin'",
+    "ome-zarr >= 0.8.3",
     "zarr >= 2.4.12",
 ]
 

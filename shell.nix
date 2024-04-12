@@ -15,7 +15,7 @@ pkgs.mkShell {
   shellHook = ''
     [[ -d .venv ]] || python3.11 -m venv .venv
     source .venv/bin/activate
-    installcmd='pip install .${pipInstallExtras}'
+    installcmd='pip install -e .${pipInstallExtras}'
     echo "Running installation command: $installcmd"
     eval "$installcmd"
   '';

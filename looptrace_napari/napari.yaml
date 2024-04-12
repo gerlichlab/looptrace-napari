@@ -4,6 +4,9 @@ contributions:
   - id: looptrace-napari.read_looptrace_locus_points_csv
     title: Read looptrace locus-specific image points overlays from CSV
     python_name: looptrace_napari.locus_specific_points_reader:get_reader
+  - id: looptrace-napari.read_looptrace_nuclei
+    title: Read looptrace nuclei images, masks, and labels data
+    python_name: looptrace_napari.nuclei_reader:get_reader
   readers:
   - command: looptrace-napari.read_looptrace_locus_points_csv
     filename_patterns:
@@ -12,3 +15,7 @@ contributions:
     - '*.qc_fail.csv'
     - '*.qc_pass.csv'
     accepts_directories: false
+  - command: looptrace-napari.read_looptrace_nuclei
+    filename_patterns:
+    - 'images*'
+    accepts_directories: true
