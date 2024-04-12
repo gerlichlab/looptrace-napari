@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from typing_extensions import Annotated
-from ._types import PathOrPaths
+from .types import PathOrPaths
 
 
 @dataclass(frozen=True, kw_only=True)

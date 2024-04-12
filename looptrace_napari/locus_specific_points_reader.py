@@ -14,7 +14,7 @@ from typing import (
 from numpydoc_decorator import doc
 
 from ._docs import CommonReaderDoc
-from ._types import (
+from .types import (
     CsvRow, 
     LayerParams,
     PathLike, 
@@ -133,8 +133,8 @@ def parse_simple_record(r: CsvRow, *, exp_len: int) -> PointRecord:
         raise TypeError(f"Record to parse must be list, not {type(r).__name__}")
     if len(r) != exp_len:
         raise ValueError(f"Expected record of length {exp_len} but got {len(r)}: {r}")
-    trace: TraceId = int(r[0])
-    timepoint: Timepoint = int(r[1])
+    trace = int(r[0])
+    timepoint = int(r[1])
     z = float(r[2])
     y = float(r[3])
     x = float(r[4])

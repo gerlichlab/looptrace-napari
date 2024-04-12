@@ -3,20 +3,21 @@
 from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Protocol
+# TODO: need Python >= 3.12
+# See: https://github.com/gerlichlab/looptrace-napari/issues/6
+#from typing import override
 
 from numpydoc_decorator import doc
 
 
 class LocatableXY(Protocol):
     
-    @property
     @abstractmethod
-    def x_coordinate(self) -> float:
+    def get_x_coordinate(self) -> float:
         raise NotImplementedError
 
-    @property
     @abstractmethod
-    def y_coordinate(self) -> float:
+    def get_y_coordinate(self) -> float:
         raise NotImplementedError
 
 
@@ -30,9 +31,14 @@ class ImagePoint2D(LocatableXY):
             raise TypeError(f"At least one coordinate isn't floating-point! {self}")
         if any(c < 0 for c in [self.x, self.y]):
             raise ValueError(f"At least one coordinate is negative! {self}")
-        
-    def x_coordinate(self) -> float:
+    
+    # TODO: adopt @override once on Python >= 3.12
+    # See: https://github.com/gerlichlab/looptrace-napari/issues/6
+    def get_x_coordinate(self) -> float:
         return self.x
     
-    def y_coordinate(self) -> float:
+    # TODO: adopt @override once on Python >= 3.12
+    # See: https://github.com/gerlichlab/looptrace-napari/issues/6
+    #@override
+    def get_y_coordinate(self) -> float:
         return self.y
