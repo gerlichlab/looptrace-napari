@@ -137,7 +137,7 @@ class NucleiVisualisationData:
                 logging.debug("Multiple channels in nuclei image; attempting to determine which to use")
                 nuc_channel = os.getenv(LOOPTRACE_NAPARI_NUCLEI_CHANNEL_ENV_VAR, "")
                 if nuc_channel == "":
-                    pass
+                    raise Exception(f"When using nuclei images with multiple channels, nuclei channel must be specified through environment variable {LOOPTRACE_NAPARI_NUCLEI_CHANNEL_ENV_VAR}.")
                 try:
                     nuc_channel = int(nuc_channel)
                 except TypeError as e:
