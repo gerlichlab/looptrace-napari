@@ -10,5 +10,5 @@ This first launch may take some time (even minutes), but after that it should be
 For instruction specific to what you want to visualise, please refer to the relevant document within this folder.
 
 ### What can be visualised
-* locus-specific points from `looptrace`
-* max-*z*-projected images of nuclei and nuclear masks/labels from `looptrace`
+* [locus-specific spots](./locus-spots.md) from `looptrace`
+* max-*z*-projected images of [nuclei and nuclear masks/labels](./nuclear-masks.md) from `looptrace`

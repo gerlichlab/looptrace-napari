@@ -16,6 +16,16 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
+dependencies = [
+    "napari >= 0.4.19; sys_platform == 'darwin'",
+    "napari[all] >= 0.4.19; sys_platform != 'darwin'",
+    "numpy",
+    "numpydoc_decorator >= 2.2.0",
+    "pandas",
+    "pyqt6 >= 6.5.0; sys_platform == 'darwin'",
+    "pytest",
+    "zarr >= 2.4.12",
+]
 
 [tool.setuptools.package-data]
 looptrace_napari = [ "napari.yaml" ]
@@ -27,15 +37,8 @@ version = { attr = "looptrace_napari.__version__" }
 looptrace-napari = "looptrace_napari:napari.yaml"
 
 [project.optional-dependencies]
-dev = [
-    "napari >= 0.4.19; sys_platform == 'darwin'",
-    "napari[all] >= 0.4.19; sys_platform != 'darwin'",
-    "numpy",
-    "numpydoc_decorator >= 2.2.0",
-    "pandas",
-    "pyqt6 >= 6.5.0; sys_platform == 'darwin'",
+test = [
     "pytest",
-    "zarr >= 2.4.12",
 ]
 
 [project.urls]
