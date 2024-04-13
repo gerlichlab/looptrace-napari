@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Visualisation of [nuclear masks](./looptrace_napari/nuclei_reader.py)
 * [Documentation](./docs/)
 * Beginnings of a [test suite](./tests/)
-* [Nix shell](./shell.nix)
+* [Nix shell](./shell.nix) for user and test environments
 
 ## [0.1.0] - 2024-04-08
 
