@@ -1,7 +1,7 @@
 [project]
 name = "looptrace-napari"
 dynamic = ["version"]
-requires-python = ">= 3.10, < 3.12"
+requires-python = ">= 3.10"
 authors = [
     {name = "Vince Reuter"}
 ]
@@ -14,6 +14,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Typing :: Typed",
 ]
@@ -47,15 +48,24 @@ version = { attr = "looptrace_napari.__version__" }
 looptrace-napari = "looptrace_napari:napari.yaml"
 
 [project.optional-dependencies]
-test = [
+formatting = [
     "black[colorama] >= 24.1",
     "codespell >= 2.2.4",
     "isort >= 5.10",
+]
+linting = [
     "mypy >= 1.0.1",
     "pandas-stubs",
     "pylint >= 3",
+]
+testsuite = [
     "pytest >= 7.1.0",
     "pytest-cov",
+]
+testall = [
+    "looptrace-napari[formatting]",
+    "looptrace-napari[linting]",
+    "looptrace-napari[testsuite]",
 ]
 
 [tool.black]

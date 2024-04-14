@@ -20,6 +20,6 @@ jobs:
       - name: Install project
         run: pip install .[linting]
       - name: Run mypy on Python ${{ matrix.python-version }} on ${{ matrix.os }}
-        run: mypy
+        run: mypy looptrace_napari
       - name: Run pylint on Python ${{ matrix.python-version }} on ${{ matrix.os }}
         run: pylint looptrace_napari
