@@ -1,4 +1,4 @@
-## Locus spots visualisations
+## Viewing locus spots
 
 ### Quickstart
 To visualise the locus-specific spots masks, you need to __drag-and-drop files__ into an active Napari window. 
@@ -10,9 +10,8 @@ To visualise the locus-specific spots masks, you need to __drag-and-drop files__
 ### What you should see
 A Napari window with a three sliders and three layers (QC pass, QC fail, and pixel data).
 - Bottom slider: ROI/trace
-- Middle slider: 
-- Top slider: 
-
+- Middle slider: imaging timepoint
+- Top slider: slice in `z`
 
 ### Details and troubleshooting
 __Scrolling__

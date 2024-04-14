@@ -1,6 +1,7 @@
 ## Development
 This project uses a Nix shell to provide a development environment. 
 To develop on this plugin, please ensure first that you have [installed the Nix package manager](https://nixos.org/download/), ideally, or that you have all the dependencies you'll need otherwise installed (e.g., in a virtual environment you're managing separately).
+If you're using the Nix shell, the first time it's started it will create a `.venv` subfolder in the project root folder.
 
 By default, with `nix-shell`, you should have all the dependencies you'll need not only to _use_ this plugin, but also to _develop_ on it. 
 In other words, dependencies to do things like run tests, run linter(s), and run type checking should all be provided. 
@@ -10,7 +11,7 @@ If an issue's open for what you're experiencing, please upvote the initial descr
 ### Testing, formatting, and linting
 Here's what corresponds approximately to what's run for CI through the project's [GitHub actions workflows](../.github/workflows/).
 
-NB: Each of the following commands is to be run _from the project [root folder](../)_.
+NB: Each of the following commands is to be run _from the project [root folder](../)_, typically from the project's Nix shell.
 
 __Run test suite__ with coverage  statistics
 ```console
