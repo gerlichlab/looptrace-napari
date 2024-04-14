@@ -4,3 +4,6 @@ build/
 *.pyc
 .venv/
 __pycache__/
+
+# test-related
+.coverage*

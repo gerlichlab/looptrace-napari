@@ -15,6 +15,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Typing :: Typed",
 ]
 dependencies = [
     "napari >= 0.4.19; sys_platform == 'darwin'",
@@ -27,6 +28,15 @@ dependencies = [
     "zarr >= 2.4.12",
 ]
 
+[project.urls]
+Homepage = "https://github.com/gerlichlab/looptrace-napari"
+Repository = "https://github.com/gerlichlab/looptrace-napari.git"
+Issues = "https://github.com/gerlichlab/looptrace-napari/issues"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [tool.setuptools.package-data]
 looptrace_napari = [ "napari.yaml" ]
 
@@ -38,14 +48,33 @@ looptrace-napari = "looptrace_napari:napari.yaml"
 
 [project.optional-dependencies]
 test = [
-    "pytest",
+    "black[colorama] >= 24.1",
+    "codespell >= 2.2.4",
+    "isort >= 5.10",
+    "mypy >= 1.0.1",
+    "pandas-stubs",
+    "pylint >= 3",
+    "pytest >= 7.1.0",
+    "pytest-cov",
 ]
 
-[project.urls]
-Homepage = "https://github.com/gerlichlab/looptrace-napari"
-Repository = "https://github.com/gerlichlab/looptrace-napari.git"
-Issues = "https://github.com/gerlichlab/looptrace-napari/issues"
+[tool.black]
+enable-unstable-feature = [
+    "string_processing", # split long formatted strings
+]
+preview = true
 
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
+[tool.codespell]
+skip = ".git,.mypy_cache,.nox,.vscode,__pycache__,poetry.lock"
+builtin = "clear,rare,informal,usage,code,names"
+ignore-words-list = "jupyter,iff"  # prevent jupyter -> jupiter, iff -> if
+check-filenames = true
+uri-ignore-words-list = "*"
+
+[tool.isort]
+profile = "black"
+
+[tool.pylint]
+# Disable missing docstrings since in general they're handled by numpydoc_decorator's @doc.
+"messages control".disable = "fixme,missing-class-docstring,missing-function-docstring,too-many-branches,unspecified-encoding,use-dict-literal"
+

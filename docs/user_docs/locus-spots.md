@@ -20,6 +20,6 @@ __Scrolling__
 In version 0.2 of this plugin, there's an image plane for every z-slice, for every timepoint, for every ROI in the particular field of view. 
 This can makes scrolling time-consuming and will be simplified in a future release. 
 
-__Finding points (centers of Guassian fits to pixel volume)__
+__Finding points (centers of Gaussian fits to pixel volume)__
 
 In version 0.2 of this plugin, a point (blue or red indicator) can only be visible only in the z-slice closest to the z-coordinate of the the center of the Gaussian fit to a particular pixel volume. Generally, these will be more toward the middle of the z-stack rather than at either end, so focus scrolling mainly through the midrange of the z-axis.

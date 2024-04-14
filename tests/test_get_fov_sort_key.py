@@ -7,12 +7,13 @@ from looptrace_napari.types import FieldOfViewFrom1
 
 
 @pytest.mark.parametrize(
-    ["folder", "extension", "expected"], [
-        ("P0001.zarr", ".zarr", FieldOfViewFrom1(1)), 
+    ["folder", "extension", "expected"],
+    [
+        ("P0001.zarr", ".zarr", FieldOfViewFrom1(1)),
         ("P0001.zarr", "zarr", None),
         ("P0002.zarr", ".zarr", FieldOfViewFrom1(2)),
-        ("P0001.zarr", ".csv", None)
-    ]
+        ("P0001.zarr", ".csv", None),
+    ],
 )
 def test_simple_zarr_folder_sort_keys(tmp_path, folder, extension, expected):
     arg = tmp_path / folder
