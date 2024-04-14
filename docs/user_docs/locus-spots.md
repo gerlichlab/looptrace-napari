@@ -4,6 +4,7 @@
 To visualise the locus-specific spots masks, you need to __drag-and-drop files__ into an active Napari window. 
 1. First, drag one of the `PXXXX.zarr` files--from the `locus_spots_visualisation` subfolder in your analysis folder from `looptrace`--into Napari.
 1. Choose to open the ZARR with the Napari native plugin(s) / readers, not this plugin's.
+1. Select "continuous" for the value of the "auto-contrast" option in the upper-left panel of the Napari window.
 1. Second, drag a the corresponding (by field of view) pair of `*qcpass.csv` and `*qcfail.csv` files into Napari.
 1. Choose to open these QC pass/fail CSVs with this plugin rather than Napari builtins.
 
