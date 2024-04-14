@@ -231,6 +231,7 @@ def build_layers(
     }
     points_params = {
         "name": "labels",
+        "size": 0,
         "text": labs_text,
         "properties": {"nucleus": nuclei_labels},
     }
