@@ -7,7 +7,7 @@
 }:
 let 
   pyenv = pkgs.python311.withPackages (pp: with pp; [ pip wheel ]);
-  pipInstallExtras = if dev then "\"[dev]\"" else "";
+  pipInstallExtras = if dev then "\"[test]\"" else "";
 in
 pkgs.mkShell {
   name = "looptrace-napari-env";

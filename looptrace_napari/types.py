@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Tuple, Union
 
-from numpydoc_decorator import doc
+from numpydoc_decorator import doc  # type: ignore[import-untyped]
 
 CsvRow = list[str]
 FailCodesText = str
@@ -21,12 +21,12 @@ Timepoint = int
 
 
 @doc(
-    summary="Wrap an int as a 1-based field of view (FOV).", 
-    parameters=dict(get="The value to wrape"), 
+    summary="Wrap an int as a 1-based field of view (FOV).",
+    parameters=dict(get="The value to wrape"),
     raises=dict(
         TypeError="If the given value to wrap isn't an integer",
         ValueError="If the given value to wrap isn't positive",
-    )
+    ),
 )
 @dataclass(frozen=True, order=True)
 class FieldOfViewFrom1:
@@ -37,12 +37,12 @@ class FieldOfViewFrom1:
 
 
 @doc(
-    summary="Wrap an int as a 1-based nucleus number.", 
-    parameters=dict(get="The value to wrap"), 
+    summary="Wrap an int as a 1-based nucleus number.",
+    parameters=dict(get="The value to wrap"),
     raises=dict(
         TypeError="If the given value to wrap isn't an integer",
         ValueError="If the given value to wrap isn't positive",
-    )
+    ),
 )
 @dataclass(frozen=True, order=True)
 class NucleusNumber:
