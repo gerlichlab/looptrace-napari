@@ -89,5 +89,5 @@ profile = "black"
 
 [tool.pylint]
 # Disable missing docstrings since in general they're handled by numpydoc_decorator's @doc.
-"messages control".disable = "fixme,missing-class-docstring,missing-function-docstring,too-many-branches,unspecified-encoding,use-dict-literal"
+"messages control".disable = "fixme,missing-class-docstring,missing-function-docstring,too-few-public-methods,too-many-branches,unspecified-encoding,use-dict-literal"
 

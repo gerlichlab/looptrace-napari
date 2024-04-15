@@ -2,22 +2,14 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Tuple, Union
+from typing import Dict, Union
 
 from numpydoc_decorator import doc  # type: ignore[import-untyped]
 
 CsvRow = list[str]
-FailCodesText = str
 LayerParams = Dict
 PathLike = Union[str, Path]
 PathOrPaths = Union[PathLike, list[PathLike]]
-PointId = Tuple["TraceId", "Timepoint"]
-PointRecord = Tuple[PointId, "Point3D"]
-Point3D = Tuple[float, float, float]
-QCFailRecord = Tuple[PointId, Point3D, FailCodesText]
-QCPassRecord = PointRecord
-TraceId = int
-Timepoint = int
 
 
 @doc(
@@ -33,7 +25,13 @@ class FieldOfViewFrom1:
     get: int
 
     def __post_init__(self) -> None:
-        _refine_as_pos_int(self.get, context="FOV")
+        if not isinstance(self.get, int):
+            raise TypeError(
+                f"Non-integer as 1-based FOV! {self.get} (type"
+                f" {type(self.get).__name__})"
+            )
+        if self.get < 1:
+            raise ValueError(f"1-based FOV view must be positive int; got {self.get}")
 
 
 @doc(
@@ -49,11 +47,52 @@ class NucleusNumber:
     get: int
 
     def __post_init__(self) -> None:
-        _refine_as_pos_int(self.get, context="nucleus number")
+        if not isinstance(self.get, int):
+            raise TypeError(
+                f"Non-integer as nucleus number! {self.get} (type"
+                f" {type(self.get).__name__})"
+            )
+        if self.get < 1:
+            raise ValueError(f"Nucleus number must be positive int; got {self.get}")
 
 
-def _refine_as_pos_int(x: object, *, context: str) -> None:
-    if not isinstance(x, int):
-        raise TypeError(f"Non-integer as {context}! {x} (type {type(x).__name__})")
-    if x < 1:
-        raise ValueError(f"1-based {context} must be positive int, not {x}")
+@doc(
+    summary="Wrap an int as a 0-based timepoint.",
+    parameters=dict(get="The value to wrap"),
+    raises=dict(
+        TypeError="If the given value to wrap isn't an integer",
+        ValueError="If the given value to wrap is negative",
+    ),
+)
+@dataclass(frozen=True, order=True)
+class TimepointFrom0:
+    get: int
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.get, int):
+            raise TypeError(
+                f"Non-integer as timepoint! {self.get} (type {type(self.get).__name__})"
+            )
+        if self.get < 0:
+            raise ValueError(f"Timepoint must be nonnegative int; got {self.get}")
+
+
+@doc(
+    summary="Wrap an int as a 0-based trace ID.",
+    parameters=dict(get="The value to wrap"),
+    raises=dict(
+        TypeError="If the given value to wrap isn't an integer",
+        ValueError="If the given value to wrap is negative",
+    ),
+)
+@dataclass(frozen=True, order=True)
+class TraceIdFrom0:
+    get: int
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.get, int):
+            raise TypeError(
+                f"Non-integer as trace ID! {self.get} (type {type(self.get).__name__})"
+            )
+        if self.get < 0:
+            raise ValueError(f"Trace ID must be nonnegative int; got {self.get}")
